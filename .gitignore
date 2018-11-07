@@ -1,0 +1,20 @@
+## Emacs
+*~
+\#*#
+.\#*
+
+## Ensime
+.ensime
+.ensime_cache/**
+ensime.sbt
+
+.DS_Store
+
+## SBT
+target
+project/project
+
+## Node
+node_modules
+
+package-lock.json
