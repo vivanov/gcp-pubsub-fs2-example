@@ -73,16 +73,13 @@ lazy val `subscriber-server` =
         "org.specs2"      %% "specs2-core"          % Specs2Version % "test",
         "ch.qos.logback"  %  "logback-classic"     % LogbackVersion
       ),
-      // Allows to read the generated JS on client
-      resources in Compile += (fastOptJS in (`subscriber-client`, Compile)).value.data,
-      // Lets the backend to read the .map file for js
-      resources in Compile += (fastOptJS in (`subscriber-client`, Compile)).value
-        .map((x: sbt.File) => new File(x.getAbsolutePath + ".map"))
-        .data,
+      // Allows to read the generated JS on client (-bundle.js and -bundle.js.map files)
+      resources in Compile ++= (webpack in (`subscriber-client`, Compile, fastOptJS)).value
+        .map ((x: sbt.Attributed[sbt.File]) => x.data),
       // Lets the server read the jsdeps file
       (managedResources in Compile) += (artifactPath in (`subscriber-client`, Compile, packageJSDependencies)).value,
       // do a fastOptJS on reStart
-      reStart := (reStart dependsOn (fastOptJS in (`subscriber-client`, Compile))).evaluated,
+      reStart := (reStart dependsOn (webpack in (`subscriber-client`, Compile, fastOptJS))).evaluated,
       // This settings makes reStart to rebuild if a scala.js file changes on the client
       watchSources ++= (watchSources in `subscriber-client`).value,
       // Support stopping the running server
