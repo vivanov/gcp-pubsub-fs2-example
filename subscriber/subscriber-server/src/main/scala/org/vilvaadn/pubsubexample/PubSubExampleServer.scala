@@ -5,6 +5,7 @@ import fs2.{ StreamApp, Scheduler }
 import org.http4s.server.blaze.BlazeBuilder
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
 
 object PubSubExampleServer extends StreamApp[IO] {
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -22,6 +23,7 @@ object ServerStream {
       .bindHttp(8080, "0.0.0.0")
       .mountService(pubSubExampleService(scheduler), "/")
       .withWebSockets(true)
+      .withIdleTimeout(Duration.Inf)
       .serve
   } yield exitCode
 }

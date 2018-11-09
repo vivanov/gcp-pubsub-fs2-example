@@ -86,7 +86,7 @@ object SubscriberClient {
 
         def onmessage(e: MessageEvent): Unit = {
           // Echo message received
-          direct.modState(_.log(s"Echo: ${e.data.toString}"))
+          direct.modState(_.log(s"Received: ${e.data.toString}"))
         }
 
         def onerror(e: Event): Unit = {
