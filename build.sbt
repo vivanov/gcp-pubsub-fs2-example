@@ -88,6 +88,7 @@ lazy val `subscriber-server` =
       addCompilerPlugin("com.olegpy"     %% "better-monadic-for" % "0.2.4")
     )
     .dependsOn(`common-jvm`)
+    .enablePlugins(SbtTwirl)
 
 lazy val publisher =
   project

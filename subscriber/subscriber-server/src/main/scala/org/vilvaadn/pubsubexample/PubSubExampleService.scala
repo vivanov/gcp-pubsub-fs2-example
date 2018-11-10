@@ -18,6 +18,7 @@ import scala.concurrent.duration._
 
 import cats.data.{ NonEmptyList, OptionT }
 import cats.syntax.option._
+import cats.syntax.functor._
 import cats.syntax.applicative._
 import cats.syntax.flatMap._
 import cats.effect.{ Effect, IO }
@@ -44,21 +45,23 @@ class PubSubExampleService[F[_]](implicit F: Effect[F]) extends Http4sDsl[F] {
       case request @ GET -> Root / "index.html" =>
         StaticFile.fromResource("/index.html", request.some)
           .getOrElseF(NotFound()) // In case the file doesn't exist
-      /*  
-      case GET -> Root =>
+      case GET -> Root / "twirl" =>
         // Supports Play Framework template -- see src/main/twirl.
         Ok(html.index())
       case GET -> Root / "hello" / name =>
         Ok(Json.obj("message" -> Json.fromString(s"Hello, ${name}")))
       case GET -> Root / "pubsub" =>
         import ExecutionContext.Implicits.global
-        messages[IO].compile.drain.unsafeRunSync
-        Ok("Done")
-       */
+        val queue = async.unboundedQueue[F, String]
+        queue.map { q =>
+          val effect = messages[F](q).compile.drain
+          val syncIO = F.runAsync(effect)(_ => IO.unit)
+          syncIO.unsafeRunSync
+        } >> Ok("Done")
       case GET -> Root / "ws" =>
         import ExecutionContext.Implicits.global
         val queue = async.unboundedQueue[F, String]
-        queue.flatMap { q =>
+        queue flatMap { q =>
           val fromClient = echoClient(q)
           val toClient = messages(q).map(msg => Text(msg))
           WebSocketBuilder[F].build(toClient, fromClient)
