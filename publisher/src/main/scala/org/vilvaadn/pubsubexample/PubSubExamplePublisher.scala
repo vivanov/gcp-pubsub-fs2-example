@@ -52,18 +52,26 @@ object PubSubExamplePublisher {
     }
   })}
 
+  // For now Publisher just generates 10 test messages to sent to the topic
+  def generateMessages: List[String] = {
+    val messageTemplate = "pubsubexample"
+    val nums = Stream.emit(1).repeat.scan1(_ + _).take(10).toList
+    nums.map(num => s"$messageTemplate$num")
+  }
+
   def publish[F[_]](implicit F: Effect[F], ec: ExecutionContext): Stream[F, List[String]] = {
+    //TODO: Following settings have to be moved into configuration
     val projectId = "pubs-tst"
     val topicId = "my-tst-topic"
+
     val topicName = ProjectTopicName.of(projectId, topicId)
     val channel = ManagedChannelBuilder.forTarget("localhost:8085").usePlaintext(true).build()
-    val messageTemplate = "pubsubexample"
 
     for {
+      //Settings Provider and Credentials Provider are only required for PubSub Emulator
       channelProvider <- Stream.eval(F.delay(FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel))))
       credentialsProvider <- Stream.eval(F.delay(NoCredentialsProvider.create()))
-      nums = Stream.emit(1).repeat.scan1(_ + _).take(10).toList
-      messages = nums.map(num => s"$messageTemplate$num")
+      messages = generateMessages
       futures <- Stream.bracket(F.delay(Publisher.newBuilder(topicName).setChannelProvider(channelProvider).setCredentialsProvider(credentialsProvider).build()))(publisher => Stream.eval(F.delay(publishMessages(publisher)(messages))), publisher => F.delay(publisher.shutdown()))
       messageIds <- Stream.eval(futures.traverse(future => apiFutureCallback(future)(F, ec)))
       _ <- Stream.eval_(F.delay(channel.shutdown()))

@@ -87,9 +87,12 @@ class PubSubExampleService[F[_]](implicit F: Effect[F]) extends Http4sDsl[F] {
   }
 
   def messages[F[_]](queue: Queue[F, String])(implicit F: Effect[F], ec: ExecutionContext): Stream[F, String] = {
+    //TODO: Following settings have to be moved into configuration
     val projectId = "pubs-tst"
     val subscriptionId = "my-tst-subscription"
+
     //val hostport = sys.env("PUBSUB_EMULATOR_HOST")
+
     val channel = ManagedChannelBuilder.forTarget("localhost:8085").usePlaintext(true).build()
     val subscriptionName = ProjectSubscriptionName.of(projectId, subscriptionId)
 
@@ -100,6 +103,7 @@ class PubSubExampleService[F[_]](implicit F: Effect[F]) extends Http4sDsl[F] {
       }
     }
     for {
+      //Settings Provider and Credentials Provider are only required for PubSub Emulator
       channelProvider <- Stream.eval(F.delay(FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel))))
       credentialsProvider <- Stream.eval(F.delay(NoCredentialsProvider.create()))
       _ = println(s"Creating subscriber")
