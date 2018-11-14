@@ -1,7 +1,7 @@
 import sbtcrossproject.CrossPlugin.autoImport.{crossProject, CrossType}
 
 val FS2Version = "1.0.0"
-val Http4sVersion = "0.20.0-SNAPSHOT"
+val Http4sVersion = "0.20.0-M3"
 val Specs2Version = "4.1.0"
 val LogbackVersion = "1.2.3"
 val GoogleCloudPubSubVersion = "1.48.0"
@@ -141,7 +141,6 @@ lazy val `subscriber-server` =
     .in(sbt file s"subscriber/subscriber-server")
     .settings(sharedSettings: _*)
     .settings(
-      resolvers += "Sonatype OSS Snapshots".at("https://oss.sonatype.org/content/repositories/snapshots"),
       libraryDependencies ++= Seq(
         "org.http4s"      %% "http4s-blaze-server" % Http4sVersion,
         "org.http4s"      %% "http4s-circe"        % Http4sVersion,
@@ -170,7 +169,6 @@ lazy val publisher =
   project
     .settings(sharedSettings: _*)
     .settings(
-      resolvers += "Sonatype OSS Snapshots".at("https://oss.sonatype.org/content/repositories/snapshots"),
       libraryDependencies ++= Seq(
         "co.fs2" %% "fs2-core" % FS2Version
       )
