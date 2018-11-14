@@ -28,7 +28,8 @@ import com.google.api.gax.core.{ CredentialsProvider, NoCredentialsProvider }
 
 import io.grpc.{ ManagedChannelBuilder, ManagedChannel }
 
-import scala.concurrent.ExecutionContext
+import io.chrisdavenport.log4cats.Logger
+import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 
 import cats.syntax.functor._
 import cats.syntax.applicative._
@@ -36,11 +37,9 @@ import cats.syntax.flatMap._
 import cats.syntax.traverse._
 import cats.syntax.either._
 import cats.instances.list._
-import cats.effect.{ Async, Effect, IO }
+import cats.effect.{ ConcurrentEffect, IO, ContextShift, Sync, Async}
 import fs2._
-import fs2.async.mutable.Queue
-import io.chrisdavenport.log4cats.Logger
-import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
+import fs2.concurrent.Queue
 
 
 object PubSubOps {
@@ -56,7 +55,7 @@ object PubSubOps {
   private def publishMessages[F[_]](publisher: Publisher)(messages: List[String])(logger: Logger[F])(implicit F: Effect[F], ec: ExecutionContext): F[List[ApiFuture[String]]] =
     messages.traverse[F, ApiFuture[String]](message => publishMessage(publisher)(message)(logger))
 
-  private def apiFutureCallback[F[_]](future: ApiFuture[String])(logger: Logger[F])(implicit F: Effect[F], ec: ExecutionContext) = Async[F].async[String] { (cb: Either[Throwable, String] => Unit) => ApiFutures.addCallback(future, new ApiFutureCallback[String]() {
+  private def apiFutureCallback[F[_]](future: ApiFuture[String])(logger: Logger[F])(implicit F: ConcurrentEffect[F], cs: ContextShift[F]) = Async[F].async[String] { (cb: Either[Throwable, String] => Unit) => ApiFutures.addCallback(future, new ApiFutureCallback[String]() {
     override def onFailure(error: Throwable) = {
       val logged = error match {
         case apiException: ApiException =>
@@ -134,7 +133,7 @@ object PubSubOps {
       })
     }
 
-  def publish[F[_]](projectId: String, topicId: String, messages: List[String])(logger: Logger[F])(implicit F: Effect[F], ec: ExecutionContext): Stream[F, List[String]] = {
+  def publish[F[_]](projectId: String, topicId: String, messages: List[String])(logger: Logger[F])(implicit F: ConcurrentEffect[F], cs: ContextShift[F]): Stream[F, List[String]] = {
     val topicName = ProjectTopicName.of(projectId, topicId)
     val channel = ManagedChannelBuilder.forTarget("localhost:8085").usePlaintext(true).build()
 
@@ -142,13 +141,14 @@ object PubSubOps {
       //Settings Provider and Credentials Provider are only required for PubSub Emulator
       channelProvider <- Stream.eval(F.delay(FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel))))
       credentialsProvider <- Stream.eval(F.delay(NoCredentialsProvider.create()))
-      futures <- Stream.bracket(F.delay(Publisher.newBuilder(topicName).setChannelProvider(channelProvider).setCredentialsProvider(credentialsProvider).build()))(publisher => Stream.eval(publishMessages(publisher)(messages)(logger)), publisher => F.delay(publisher.shutdown()))
-      messageIds <- Stream.eval(futures.traverse[F, String](future => apiFutureCallback(future)(logger)(F, ec)))
+      publisher <- Stream.bracket(F.delay(Publisher.newBuilder(topicName).setChannelProvider(channelProvider).setCredentialsProvider(credentialsProvider).build()))(publisher => F.delay(publisher.shutdown()))
+      futures <- Stream.eval(publishMessages(publisher)(messages)(logger))
+      messageIds <- Stream.eval(futures.traverse[F, String](future => apiFutureCallback(future)(logger)))
       _ <- Stream.eval_(F.delay(channel.shutdown()))
     } yield messageIds
   }
 
-  def subscribe[F[_]](queue: Queue[F, String], projectId: String, subscriptionId: String)(logger: Logger[F])(implicit F: Effect[F], ec: ExecutionContext): Stream[F, String] = {
+  def subscribe[F[_]](queue: Queue[F, String], projectId: String, subscriptionId: String)(logger: Logger[F])(implicit F: ConcurrentEffect[F], cs: ContextShift[F]): Stream[F, String] = {
     //val hostport = sys.env("PUBSUB_EMULATOR_HOST")
 
     val channel = ManagedChannelBuilder.forTarget("localhost:8085").usePlaintext(true).build()
@@ -165,7 +165,8 @@ object PubSubOps {
       channelProvider <- Stream.eval(F.delay(FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel))))
       credentialsProvider <- Stream.eval(F.delay(NoCredentialsProvider.create()))
       _ <- Stream.eval(logger.info(s"Creating subscriber"))
-      _ <- Stream.bracket(F.delay(Subscriber.newBuilder(subscriptionName, receiver).setChannelProvider(channelProvider).setCredentialsProvider(credentialsProvider).build()))( subscriber => Stream.eval(F.delay(subscriber.startAsync())), subscriber => F.delay(subscriber.stopAsync()) )
+      subscriber <- Stream.bracket(F.delay(Subscriber.newBuilder(subscriptionName, receiver).setChannelProvider(channelProvider).setCredentialsProvider(credentialsProvider).build()))(subscriber => F.delay(subscriber.stopAsync()) )
+      _ <- Stream.eval(F.delay(subscriber.startAsync()))
       _ <- Stream.eval(logger.info(s"Retrieving message from queue"))
       message <- queue.dequeue
     } yield message
