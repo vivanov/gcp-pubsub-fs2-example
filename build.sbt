@@ -83,7 +83,7 @@ lazy val `subscriber-server` =
       // This settings makes reStart to rebuild if a scala.js file changes on the client
       watchSources ++= (watchSources in `subscriber-client`).value,
       // Support stopping the running server
-      mainClass in reStart := Some("cota.pubsubexample.PubSubExampleServer"),
+      mainClass in reStart := Some("org.vilvaadn.pubsubexample.PubSubExampleServer"),
       addCompilerPlugin("org.spire-math" %% "kind-projector"     % "0.9.6"),
       addCompilerPlugin("com.olegpy"     %% "better-monadic-for" % "0.2.4")
     )
