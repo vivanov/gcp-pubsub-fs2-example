@@ -15,7 +15,6 @@ import com.google.api.gax.core.{ CredentialsProvider, NoCredentialsProvider }
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-
 import cats.data.{ NonEmptyList, OptionT }
 import cats.syntax.option._
 import cats.syntax.functor._
@@ -34,7 +33,7 @@ import org.http4s.twirl._
 import org.http4s.server.websocket._
 import org.http4s.websocket.WebsocketBits._
 
-import PubSubOps.subscribe
+import PubSubOps.{ PubSubConfig, subscribe }
 
 class PubSubExampleService[F[_]](implicit F: Effect[F]) extends Http4sDsl[F] {
   def getResource(pathInfo: String) = F.delay(getClass.getResource(pathInfo))
@@ -42,7 +41,7 @@ class PubSubExampleService[F[_]](implicit F: Effect[F]) extends Http4sDsl[F] {
   val supportedStaticExtensions =
     List(".html", ".js", ".map", ".css", ".png", ".ico")
 
-  def service(scheduler: Scheduler): HttpService[F] = {
+  def service(scheduler: Scheduler, config: PubSubConfig): HttpService[F] = {
     HttpService[F] {
       case request @ GET -> Root / "index.html" =>
         StaticFile.fromResource("/index.html", request.some)
@@ -54,26 +53,27 @@ class PubSubExampleService[F[_]](implicit F: Effect[F]) extends Http4sDsl[F] {
         Ok(Json.obj("message" -> Json.fromString(s"Hello, ${name}")))
       case GET -> Root / "pubsub" =>
         import ExecutionContext.Implicits.global
-        //TODO: Following settings have to be moved into configuration
-        val projectId = "pubs-tst"
-        val subscriptionId = "my-tst-subscription"
+        lazy val error = F.raiseError[String](new Exception("Unable to read subscription name from configuration"))
         val queue = async.unboundedQueue[F, String]
-        queue.map { q =>
-          val effect = subscribe[F](q, projectId, subscriptionId).compile.drain
-          val syncIO = F.runAsync(effect)(_ => IO.unit)
-          syncIO.unsafeRunSync
-        } >> Ok("Done")
+        for {
+          subscriptionId <- config.subscriptionId.fold(error)(_.pure[F])
+          q <- queue
+          effect = subscribe[F](q, config.projectId, subscriptionId).compile.drain
+          syncIO = F.runAsync(effect)(_ => IO.unit)
+          _ = syncIO.unsafeRunSync
+          response <- Ok("Done")
+        } yield response
       case GET -> Root / "ws" =>
         import ExecutionContext.Implicits.global
-        //TODO: Following settings have to be moved into configuration
-        val projectId = "pubs-tst"
-        val subscriptionId = "my-tst-subscription"
+        lazy val error = F.raiseError[String](new Exception("Unable to read subscription name from configuration"))
         val queue = async.unboundedQueue[F, String]
-        queue flatMap { q =>
-          val fromClient = echoClient(q)
-          val toClient = subscribe(q, projectId, subscriptionId).map(msg => Text(msg))
-          WebSocketBuilder[F].build(toClient, fromClient)
-        }
+        for {
+          subscriptionId <- config.subscriptionId.fold(error)(_.pure[F])
+          q <- queue
+          fromClient = echoClient(q)
+          toClient = subscribe(q, config.projectId, subscriptionId).map(msg => Text(msg))
+          built <- WebSocketBuilder[F].build(toClient, fromClient)
+        } yield built
 
       case req if supportedStaticExtensions.exists(req.pathInfo.endsWith) =>
         StaticFile.fromResource[F](req.pathInfo, req.some)

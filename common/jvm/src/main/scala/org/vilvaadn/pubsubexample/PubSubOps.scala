@@ -33,6 +33,8 @@ import fs2.async.mutable.Queue
 
 
 object PubSubOps {
+  case class PubSubConfig(projectId: String, topicId: Option[String], subscriptionId: Option[String])
+
   private def publishMessage(publisher: Publisher)(message: String): ApiFuture[String] = {
     println(s"Publishing message: $message")
     val data = ByteString.copyFromUtf8(message)

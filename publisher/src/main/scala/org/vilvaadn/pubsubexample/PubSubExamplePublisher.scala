@@ -16,13 +16,16 @@ import com.google.api.gax.rpc.{ TransportChannelProvider, FixedTransportChannelP
 import com.google.api.gax.core.{ CredentialsProvider, NoCredentialsProvider }
 
 import scala.concurrent.ExecutionContext
+import cats.syntax.applicative._
 import cats.syntax.traverse._
 import cats.syntax.either._
 import cats.instances.list._
 import cats.effect.{ Async, Effect, IO }
 import fs2._
+import pureconfig._
+import pureconfig.module.catseffect._
 
-import PubSubOps.publish
+import PubSubOps.{ PubSubConfig, publish }
 
 object PubSubExamplePublisher {
   // For now Publisher just generates 10 test messages to sent to the topic
@@ -34,11 +37,15 @@ object PubSubExamplePublisher {
 
   def main(args: Array[String]): Unit = {
     import ExecutionContext.Implicits.global
-    //TODO: Following settings have to be moved into configuration
-    val projectId = "pubs-tst"
-    val topicId = "my-tst-topic"
     val messages = generateMessages
-    val io = publish[IO](projectId, topicId, messages)
-    io.compile.drain.unsafeRunSync
+    lazy val error = IO.raiseError[String](new Exception("Unable to read topic name from configuration"))
+    
+    val io = for {
+      config <- loadConfigF[IO, PubSubConfig]
+      topicId <- config.topicId.fold(error)(_.pure[IO])
+      published = publish[IO](config.projectId, topicId, messages)
+      _ <- published.compile.drain
+    } yield ()
+    io.unsafeRunSync
   }
 }

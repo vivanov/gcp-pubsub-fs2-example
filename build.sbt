@@ -7,6 +7,7 @@ val LogbackVersion = "1.2.3"
 val GoogleCloudPubSubVersion = "1.48.0"
 val ScalaJSReactVersion = "1.3.1"
 val scalaJsDomVersion = "0.9.6"
+val PureConfigVersion = "0.9.2"
 
 lazy val root = project 
   .in(sbt file ".")
@@ -74,7 +75,9 @@ lazy val `subscriber-server` =
         "org.http4s"      %% "http4s-dsl"          % Http4sVersion,
         "org.http4s"      %% "http4s-twirl"        % Http4sVersion,
         "org.specs2"      %% "specs2-core"         % Specs2Version % "test",
-        "ch.qos.logback"  %  "logback-classic"     % LogbackVersion
+        "ch.qos.logback"  %  "logback-classic"     % LogbackVersion,
+        "com.github.pureconfig" %% "pureconfig"    % PureConfigVersion,
+        "com.github.pureconfig" %% "pureconfig-cats-effect" % PureConfigVersion
       ),
       // Allows to read the generated JS on client (-bundle.js and -bundle.js.map files)
       resources in Compile ++= (webpack in (`subscriber-client`, Compile, fastOptJS)).value
@@ -97,7 +100,9 @@ lazy val publisher =
   project
     .settings(
       libraryDependencies ++= Seq(
-        "co.fs2" %% "fs2-core" % FS2Version
+        "co.fs2" %% "fs2-core" % FS2Version,
+        "com.github.pureconfig" %% "pureconfig"    % PureConfigVersion,
+        "com.github.pureconfig" %% "pureconfig-cats-effect" % PureConfigVersion
       )
     )
     .dependsOn(`common-jvm`)
