@@ -65,7 +65,7 @@ Then to download Node dependencies and generate required JS artifacts it's necce
 
 After that, having server running, client application is available by following URL by default: `http://localost:8080/index.html`
 
-This example project is based on and mostly assmebled from:
+This example project is based on and mostly assembled from:
 
  - [http4s](https://github.com/http4s/http4s) and more specifically WebSocket example (versions [0.18](https://github.com/http4s/http4s/blob/release-0.18.x/examples/blaze/src/main/scala/com/example/http4s/blaze/BlazeWebSocketExample.scala) and [0.20](https://github.com/http4s/http4s/blob/master/examples/blaze/src/main/scala/com/example/http4s/blaze/BlazeWebSocketExample.scala))
  - [scalajs-react](https://github.com/japgolly/scalajs-react) and more specifically [WebSocket client example](https://github.com/japgolly/scalajs-react/blob/master/gh-pages/src/main/scala/ghpages/examples/WebSocketsExample.scala)
