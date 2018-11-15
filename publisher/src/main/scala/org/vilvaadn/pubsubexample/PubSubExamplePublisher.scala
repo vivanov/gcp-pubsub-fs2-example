@@ -22,36 +22,9 @@ import cats.instances.list._
 import cats.effect.{ Async, Effect, IO }
 import fs2._
 
+import PubSubOps.publish
 
 object PubSubExamplePublisher {
-
-  def publishMessage(publisher: Publisher)(message: String): ApiFuture[String] = {
-    println(s"Publishing message: $message")
-    val data = ByteString.copyFromUtf8(message)
-    val pubsubMessage = PubsubMessage.newBuilder().setData(data).build()
-    publisher.publish(pubsubMessage)
-  }
-
-  def publishMessages(publisher: Publisher)(messages: List[String]): List[ApiFuture[String]] =
-    messages.map(message => publishMessage(publisher)(message))
-
-  def apiFutureCallback[F[_]](future: ApiFuture[String])(implicit F: Effect[F], ec: ExecutionContext) = Async[F].async[String] { (cb: Either[Throwable, String] => Unit) => ApiFutures.addCallback(future, new ApiFutureCallback[String]() {
-    override def onFailure(error: Throwable) = {
-      error match {
-        case apiException: ApiException =>
-          println(s"ApiException was thrown while publishing message, code: ${apiException.getStatusCode().getCode()}, retryable: ${apiException.isRetryable()}, message: ${apiException.getMessage}")
-        case _ =>
-          println(s"Error publishing message: ${error.getMessage()}")
-      }
-      cb(error.asLeft[String])
-    }
-
-    override def onSuccess(messageId: String) = {
-      println(s"Message sucessfully published, message Id: $messageId")
-      cb(messageId.asRight[Throwable])
-    }
-  })}
-
   // For now Publisher just generates 10 test messages to sent to the topic
   def generateMessages: List[String] = {
     val messageTemplate = "pubsubexample"
@@ -59,28 +32,13 @@ object PubSubExamplePublisher {
     nums.map(num => s"$messageTemplate$num")
   }
 
-  def publish[F[_]](implicit F: Effect[F], ec: ExecutionContext): Stream[F, List[String]] = {
+  def main(args: Array[String]): Unit = {
+    import ExecutionContext.Implicits.global
     //TODO: Following settings have to be moved into configuration
     val projectId = "pubs-tst"
     val topicId = "my-tst-topic"
-
-    val topicName = ProjectTopicName.of(projectId, topicId)
-    val channel = ManagedChannelBuilder.forTarget("localhost:8085").usePlaintext(true).build()
-
-    for {
-      //Settings Provider and Credentials Provider are only required for PubSub Emulator
-      channelProvider <- Stream.eval(F.delay(FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel))))
-      credentialsProvider <- Stream.eval(F.delay(NoCredentialsProvider.create()))
-      messages = generateMessages
-      futures <- Stream.bracket(F.delay(Publisher.newBuilder(topicName).setChannelProvider(channelProvider).setCredentialsProvider(credentialsProvider).build()))(publisher => Stream.eval(F.delay(publishMessages(publisher)(messages))), publisher => F.delay(publisher.shutdown()))
-      messageIds <- Stream.eval(futures.traverse(future => apiFutureCallback(future)(F, ec)))
-      _ <- Stream.eval_(F.delay(channel.shutdown()))
-    } yield messageIds
-  }
-
-  def main(args: Array[String]): Unit = {
-    import ExecutionContext.Implicits.global
-    val io = publish[IO]
+    val messages = generateMessages
+    val io = publish[IO](projectId, topicId, messages)
     io.compile.drain.unsafeRunSync
   }
 }

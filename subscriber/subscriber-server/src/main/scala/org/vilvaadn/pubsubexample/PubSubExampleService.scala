@@ -34,6 +34,8 @@ import org.http4s.twirl._
 import org.http4s.server.websocket._
 import org.http4s.websocket.WebsocketBits._
 
+import PubSubOps.subscribe
+
 class PubSubExampleService[F[_]](implicit F: Effect[F]) extends Http4sDsl[F] {
   def getResource(pathInfo: String) = F.delay(getClass.getResource(pathInfo))
 
@@ -52,18 +54,24 @@ class PubSubExampleService[F[_]](implicit F: Effect[F]) extends Http4sDsl[F] {
         Ok(Json.obj("message" -> Json.fromString(s"Hello, ${name}")))
       case GET -> Root / "pubsub" =>
         import ExecutionContext.Implicits.global
+        //TODO: Following settings have to be moved into configuration
+        val projectId = "pubs-tst"
+        val subscriptionId = "my-tst-subscription"
         val queue = async.unboundedQueue[F, String]
         queue.map { q =>
-          val effect = messages[F](q).compile.drain
+          val effect = subscribe[F](q, projectId, subscriptionId).compile.drain
           val syncIO = F.runAsync(effect)(_ => IO.unit)
           syncIO.unsafeRunSync
         } >> Ok("Done")
       case GET -> Root / "ws" =>
         import ExecutionContext.Implicits.global
+        //TODO: Following settings have to be moved into configuration
+        val projectId = "pubs-tst"
+        val subscriptionId = "my-tst-subscription"
         val queue = async.unboundedQueue[F, String]
         queue flatMap { q =>
           val fromClient = echoClient(q)
-          val toClient = messages(q).map(msg => Text(msg))
+          val toClient = subscribe(q, projectId, subscriptionId).map(msg => Text(msg))
           WebSocketBuilder[F].build(toClient, fromClient)
         }
 
@@ -84,32 +92,5 @@ class PubSubExampleService[F[_]](implicit F: Effect[F]) extends Http4sDsl[F] {
       case other => 
         F.delay(println(s"Unknown type: $other")) >> queue.enqueue1("Client have sent something new")
     }
-  }
-
-  def messages[F[_]](queue: Queue[F, String])(implicit F: Effect[F], ec: ExecutionContext): Stream[F, String] = {
-    //TODO: Following settings have to be moved into configuration
-    val projectId = "pubs-tst"
-    val subscriptionId = "my-tst-subscription"
-
-    //val hostport = sys.env("PUBSUB_EMULATOR_HOST")
-
-    val channel = ManagedChannelBuilder.forTarget("localhost:8085").usePlaintext(true).build()
-    val subscriptionName = ProjectSubscriptionName.of(projectId, subscriptionId)
-
-    val receiver = new MessageReceiver {
-      override def receiveMessage(message: PubsubMessage, consumer: AckReplyConsumer) = {
-        val msg = s"New message from topic: ${message.getData().toStringUtf8()}"
-        F.runAsync(F.delay(println(msg)) >> queue.enqueue1(msg))(_ => IO(consumer.ack())).unsafeRunSync
-      }
-    }
-    for {
-      //Settings Provider and Credentials Provider are only required for PubSub Emulator
-      channelProvider <- Stream.eval(F.delay(FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel))))
-      credentialsProvider <- Stream.eval(F.delay(NoCredentialsProvider.create()))
-      _ = println(s"Creating subscriber")
-      _ <- Stream.bracket(F.delay(Subscriber.newBuilder(subscriptionName, receiver).setChannelProvider(channelProvider).setCredentialsProvider(credentialsProvider).build()))( subscriber => Stream.eval(F.delay(subscriber.startAsync())), subscriber => F.delay(subscriber.stopAsync()) )
-      _ = println(s"Retrieving message from queue")
-      message <- queue.dequeue
-    } yield message
   }
 }

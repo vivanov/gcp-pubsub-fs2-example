@@ -25,6 +25,10 @@ lazy val common = crossProject(JSPlatform, JVMPlatform)
   ).
   jvmSettings(
     // Add JVM-specific settings here
+      libraryDependencies ++= Seq(
+        "co.fs2" %% "fs2-core" % FS2Version,
+        "com.google.cloud" % "google-cloud-pubsub" % GoogleCloudPubSubVersion,
+      )
   ).
   jsSettings(
     // Add JS-specific settings here
@@ -68,9 +72,8 @@ lazy val `subscriber-server` =
         "org.http4s"      %% "http4s-blaze-server" % Http4sVersion,
         "org.http4s"      %% "http4s-circe"        % Http4sVersion,
         "org.http4s"      %% "http4s-dsl"          % Http4sVersion,
-        "org.http4s"      %% "http4s-twirl" % Http4sVersion,
-        "com.google.cloud" % "google-cloud-pubsub" % GoogleCloudPubSubVersion,
-        "org.specs2"      %% "specs2-core"          % Specs2Version % "test",
+        "org.http4s"      %% "http4s-twirl"        % Http4sVersion,
+        "org.specs2"      %% "specs2-core"         % Specs2Version % "test",
         "ch.qos.logback"  %  "logback-classic"     % LogbackVersion
       ),
       // Allows to read the generated JS on client (-bundle.js and -bundle.js.map files)
@@ -94,7 +97,7 @@ lazy val publisher =
   project
     .settings(
       libraryDependencies ++= Seq(
-        "co.fs2" %% "fs2-core" % FS2Version,
-        "com.google.cloud" % "google-cloud-pubsub" % GoogleCloudPubSubVersion
-      ),
+        "co.fs2" %% "fs2-core" % FS2Version
+      )
     )
+    .dependsOn(`common-jvm`)
