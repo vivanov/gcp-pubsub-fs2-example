@@ -67,7 +67,7 @@ After that, having server running, client application is available by following 
 
 This example project is based on and mostly assmebled from:
 
- - (http4s)[https://github.com/http4s/http4s] and more specifically WebSocket example (versions (0.18)[https://github.com/http4s/http4s/blob/release-0.18.x/examples/blaze/src/main/scala/com/example/http4s/blaze/BlazeWebSocketExample.scala] and (0.20)[https://github.com/http4s/http4s/blob/master/examples/blaze/src/main/scala/com/example/http4s/blaze/BlazeWebSocketExample.scala])
- - (scalajs-react)[https://github.com/japgolly/scalajs-react] and more specifically (WebSocket client example)[https://github.com/japgolly/scalajs-react/blob/master/gh-pages/src/main/scala/ghpages/examples/WebSocketsExample.scala]
- - [http4s-scalajsxample](https://github.com/ChristopherDavenport/http4s-scalajsexample) and its (JSApplication example)[https://github.com/ChristopherDavenport/http4s-scalajsexample/blob/master/backend/src/main/scala/org/http4s/scalajsexample/JSApplication.scala]
- - (http4sapp)[https://github.com/objektwerks/typelevel/blob/master/src/main/scala/objektwerks/app/Http4sApp.scala] and (pwa.http4s)[https://github.com/objektwerks/pwa.http4s]
+ - [http4s](https://github.com/http4s/http4s) and more specifically WebSocket example (versions [0.18](https://github.com/http4s/http4s/blob/release-0.18.x/examples/blaze/src/main/scala/com/example/http4s/blaze/BlazeWebSocketExample.scala) and [0.20](https://github.com/http4s/http4s/blob/master/examples/blaze/src/main/scala/com/example/http4s/blaze/BlazeWebSocketExample.scala))
+ - [scalajs-react](https://github.com/japgolly/scalajs-react) and more specifically [WebSocket client example](https://github.com/japgolly/scalajs-react/blob/master/gh-pages/src/main/scala/ghpages/examples/WebSocketsExample.scala)
+ - [http4s-scalajsxample](https://github.com/ChristopherDavenport/http4s-scalajsexample) and its [JSApplication example](https://github.com/ChristopherDavenport/http4s-scalajsexample/blob/master/backend/src/main/scala/org/http4s/scalajsexample/JSApplication.scala)
+ - [http4sapp](https://github.com/objektwerks/typelevel/blob/master/src/main/scala/objektwerks/app/Http4sApp.scala) and [pwa.http4s](https://github.com/objektwerks/pwa.http4s)
