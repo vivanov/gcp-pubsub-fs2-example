@@ -2,9 +2,10 @@ package org.vilvaadn.pubsubexample
 
 import java.io.File
 
+import java.util.concurrent.Executors
+
 import io.chrisdavenport.log4cats.Logger
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
-import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -32,22 +33,23 @@ import org.http4s.websocket.WebSocketFrame
 import org.http4s.websocket.WebSocketFrame._
 
 import pureconfig._
+import pureconfig.generic.auto._
 import pureconfig.module.catseffect._
 import pureconfig.error.ConfigReaderException
 
 import PubSubOps.{ PubSubConfig, subscribe }
 
 object PubSubExampleApp {
-  def apply[F[_]: ConcurrentEffect: Timer: ContextShift]: PubSubExampleApp[F] = new PubSubExampleApp[F]
+  def apply[F[_]: ConcurrentEffect: Timer: ContextShift](config: PubSubConfig, logger: Logger[F]): PubSubExampleApp[F] = new PubSubExampleApp[F](config, logger)
 }
 
-class PubSubExampleApp[F[_]](implicit F: ConcurrentEffect[F], timer: Timer[F], cs: ContextShift[F]) extends Http4sDsl[F] {
+class PubSubExampleApp[F[_]](val config: PubSubConfig)(implicit F: ConcurrentEffect[F], timer: Timer[F], cs: ContextShift[F]) extends Http4sDsl[F] {
   def getResource(pathInfo: String) = F.delay(getClass.getResource(pathInfo))
 
   val supportedStaticExtensions =
     List(".html", ".js", ".map", ".css", ".png", ".ico")
 
-  def routes(config: PubSubConfig, logger: Logger[F]): HttpRoutes[F] = HttpRoutes.of[F] {
+  def routes: HttpRoutes[F] = HttpRoutes.of[F] {
     case request @ GET -> Root / "index.html" =>
       val ec = ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
       StaticFile.fromResource("/index.html", ec, request.some)
@@ -101,7 +103,7 @@ class PubSubExampleApp[F[_]](implicit F: ConcurrentEffect[F], timer: Timer[F], c
     config <- Stream.eval(loadConfigF[F, PubSubConfig])
     built <- BlazeServerBuilder[F]
       .bindHttp(8080)
-      .withHttpApp(routes(config).orNotFound)
+      .withHttpApp(routes.orNotFound)
       .withWebSockets(true)
       .withIdleTimeout(Duration.Inf)
       .serve

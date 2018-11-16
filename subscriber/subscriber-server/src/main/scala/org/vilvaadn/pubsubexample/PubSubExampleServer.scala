@@ -7,6 +7,7 @@ import fs2._
 import org.http4s.server.blaze.BlazeServerBuilder
 
 import pureconfig._
+import pureconfig.generic.auto._
 import pureconfig.module.catseffect._
 import pureconfig.error.ConfigReaderException
 
@@ -16,5 +17,12 @@ import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 import PubSubOps.PubSubConfig
 
 object PubSubExampleServer extends IOApp {
-  override def run(args: List[String]): IO[ExitCode] = PubSubExampleApp[IO].stream.compile.drain.as(ExitCode.Success)
+  override def run(args: List[String]): IO[ExitCode] = {
+    val io = for {
+      logger <- Slf4jLogger.create[IO]
+      config <- loadConfigF[IO, PubSubConfig]
+      result <- PubSubExampleApp[IO](config).stream.compile.drain
+    } yield result
+    io.as(ExitCode.Success)
+  }
 }

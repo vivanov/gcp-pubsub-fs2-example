@@ -13,6 +13,7 @@ import cats.effect.{ IO, ExitCode, IOApp }
 import fs2._
 import com.typesafe.config.ConfigFactory
 import pureconfig._
+import pureconfig.generic.auto._
 import pureconfig.module.catseffect._
 import io.chrisdavenport.log4cats.Logger
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
@@ -29,9 +30,6 @@ object PubSubExamplePublisher extends IOApp {
   }
 
   def run(args: List[String]): IO[ExitCode] = {
-    //TODO: Following settings have to be moved into configuration
-    val projectId = "pubs-tst"
-    val topicId = "my-tst-topic"
     val messages = generateMessages
     lazy val error = IO.raiseError[String](new Exception("Unable to read topic name from configuration"))
 
