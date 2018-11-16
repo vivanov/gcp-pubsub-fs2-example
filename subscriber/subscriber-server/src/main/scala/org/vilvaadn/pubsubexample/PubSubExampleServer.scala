@@ -1,5 +1,8 @@
 package org.vilvaadn.pubsubexample
 
+import io.chrisdavenport.log4cats.Logger
+import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
+
 import cats.syntax.all._
 import cats.effect.{Effect, IO, IOApp, ExitCode}
 import cats.effect.implicits._
@@ -11,9 +14,6 @@ import pureconfig.generic.auto._
 import pureconfig.module.catseffect._
 import pureconfig.error.ConfigReaderException
 
-import io.chrisdavenport.log4cats.Logger
-import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
-
 import PubSubOps.PubSubConfig
 
 object PubSubExampleServer extends IOApp {
@@ -21,7 +21,7 @@ object PubSubExampleServer extends IOApp {
     val io = for {
       logger <- Slf4jLogger.create[IO]
       config <- loadConfigF[IO, PubSubConfig]
-      result <- PubSubExampleApp[IO](config).stream.compile.drain
+      result <- PubSubExampleApp[IO](config, logger).stream.compile.drain
     } yield result
     io.as(ExitCode.Success)
   }

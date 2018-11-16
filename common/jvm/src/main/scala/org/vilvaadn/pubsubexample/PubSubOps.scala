@@ -45,14 +45,14 @@ import fs2.concurrent.Queue
 object PubSubOps {
   case class PubSubConfig(projectId: String, topicId: Option[String], subscriptionId: Option[String])
 
-  private def publishMessage[F[_]](publisher: Publisher)(message: String)(logger: Logger[F])(implicit F: Effect[F], ec: ExecutionContext): F[ApiFuture[String]] = for {
+  private def publishMessage[F[_]](publisher: Publisher)(message: String)(logger: Logger[F])(implicit F: ConcurrentEffect[F], cs: ContextShift[F]): F[ApiFuture[String]] = for {
     _ <- logger.info(s"Publishing message: $message")
     data = ByteString.copyFromUtf8(message)
     pubsubMessage = PubsubMessage.newBuilder().setData(data).build()
     future <- F.delay(publisher.publish(pubsubMessage))
   } yield future
 
-  private def publishMessages[F[_]](publisher: Publisher)(messages: List[String])(logger: Logger[F])(implicit F: Effect[F], ec: ExecutionContext): F[List[ApiFuture[String]]] =
+  private def publishMessages[F[_]](publisher: Publisher)(messages: List[String])(logger: Logger[F])(implicit F: ConcurrentEffect[F], cs: ContextShift[F]): F[List[ApiFuture[String]]] =
     messages.traverse[F, ApiFuture[String]](message => publishMessage(publisher)(message)(logger))
 
   private def apiFutureCallback[F[_]](future: ApiFuture[String])(logger: Logger[F])(implicit F: ConcurrentEffect[F], cs: ContextShift[F]) = Async[F].async[String] { (cb: Either[Throwable, String] => Unit) => ApiFutures.addCallback(future, new ApiFutureCallback[String]() {
@@ -63,13 +63,13 @@ object PubSubOps {
         case _ =>
           logger.info(s"Error publishing message: ${error.getMessage()}")
       }
-      F.runAsync(logged)(_ => IO.unit).unsafeRunSync // No asyncF available till cats-effect 1.0.0 (crying)
+      F.runAsync(logged)(_ => IO.unit).unsafeRunSync
       cb(error.asLeft[String]) 
     }
 
     override def onSuccess(messageId: String) = {
       val logged = logger.info(s"Message sucessfully published, message Id: $messageId")
-      F.runAsync(logged)(_ => IO.unit).unsafeRunSync // No asyncF available till cats-effect 1.0.0 (crying)
+      F.runAsync(logged)(_ => IO.unit).unsafeRunSync
       cb(messageId.asRight[Throwable])
     }
   }, Executors.newSingleThreadExecutor())}

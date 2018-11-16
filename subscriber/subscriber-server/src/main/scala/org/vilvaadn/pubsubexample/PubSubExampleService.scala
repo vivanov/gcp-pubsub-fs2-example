@@ -43,7 +43,7 @@ object PubSubExampleApp {
   def apply[F[_]: ConcurrentEffect: Timer: ContextShift](config: PubSubConfig, logger: Logger[F]): PubSubExampleApp[F] = new PubSubExampleApp[F](config, logger)
 }
 
-class PubSubExampleApp[F[_]](val config: PubSubConfig)(implicit F: ConcurrentEffect[F], timer: Timer[F], cs: ContextShift[F]) extends Http4sDsl[F] {
+class PubSubExampleApp[F[_]](val config: PubSubConfig, val logger: Logger[F])(implicit F: ConcurrentEffect[F], timer: Timer[F], cs: ContextShift[F]) extends Http4sDsl[F] {
   def getResource(pathInfo: String) = F.delay(getClass.getResource(pathInfo))
 
   val supportedStaticExtensions =
@@ -78,7 +78,7 @@ class PubSubExampleApp[F[_]](val config: PubSubConfig)(implicit F: ConcurrentEff
         subscriptionId <- config.subscriptionId.fold(error)(_.pure[F])
         q <- queue
         fromClient = echoClient(q)
-        toClient = subscribe(q, config.projectId, subscriptionId).map(msg => Text(msg))
+        toClient = subscribe(q, config.projectId, subscriptionId)(logger).map(msg => Text(msg))
         built <- WebSocketBuilder[F].build(toClient, fromClient)
       } yield built
 

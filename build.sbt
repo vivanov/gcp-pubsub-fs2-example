@@ -8,7 +8,7 @@ val GoogleCloudPubSubVersion = "1.48.0"
 val ScalaJSReactVersion = "1.3.1"
 val ScalaJsDomVersion = "0.9.6"
 val PureConfigVersion = "0.10.0"
-val Log4CatsVersion = "0.1.0"
+val Log4CatsVersion = "0.2.0"
 
 val ReactVersion = "16.5.1"
 
