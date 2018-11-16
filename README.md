@@ -40,7 +40,11 @@ Example output:
 }
 ```
 
-Then publisher and subscriber have to use project, topic and subsctiption created above. For now source files have to be edited manually, in future they have to be externalized into configuration files.  
+Then publisher and subscriber have to use project, topic and subsctiption created above. 
+
+Names for project, topic and subscription are defined in following configuration files:
+  - publisher: `publisher/src/main/resources/application.conf`
+  - subscriber: `subscriber/subscriber-server/src/main/resources/application.conf`
 
 Publisher: `projectId` and `topicId` in `PubSubExamplePublisher.publish` method.
 
