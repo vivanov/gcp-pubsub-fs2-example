@@ -8,6 +8,7 @@ val GoogleCloudPubSubVersion = "1.48.0"
 val ScalaJSReactVersion = "1.3.1"
 val scalaJsDomVersion = "0.9.6"
 val PureConfigVersion = "0.9.2"
+val Log4CatsVersion = "0.1.0"
 
 lazy val root = project 
   .in(sbt file ".")
@@ -29,6 +30,9 @@ lazy val common = crossProject(JSPlatform, JVMPlatform)
       libraryDependencies ++= Seq(
         "co.fs2" %% "fs2-core" % FS2Version,
         "com.google.cloud" % "google-cloud-pubsub" % GoogleCloudPubSubVersion,
+        "io.chrisdavenport" %% "log4cats-core"    % Log4CatsVersion,
+        "io.chrisdavenport" %% "log4cats-slf4j"   % Log4CatsVersion,
+        "ch.qos.logback"  %  "logback-classic"     % LogbackVersion
       )
   ).
   jsSettings(
@@ -75,6 +79,8 @@ lazy val `subscriber-server` =
         "org.http4s"      %% "http4s-dsl"          % Http4sVersion,
         "org.http4s"      %% "http4s-twirl"        % Http4sVersion,
         "org.specs2"      %% "specs2-core"         % Specs2Version % "test",
+        "io.chrisdavenport" %% "log4cats-core"    % Log4CatsVersion,
+        "io.chrisdavenport" %% "log4cats-slf4j"   % Log4CatsVersion,
         "ch.qos.logback"  %  "logback-classic"     % LogbackVersion,
         "com.github.pureconfig" %% "pureconfig"    % PureConfigVersion,
         "com.github.pureconfig" %% "pureconfig-cats-effect" % PureConfigVersion
@@ -102,7 +108,10 @@ lazy val publisher =
       libraryDependencies ++= Seq(
         "co.fs2" %% "fs2-core" % FS2Version,
         "com.github.pureconfig" %% "pureconfig"    % PureConfigVersion,
-        "com.github.pureconfig" %% "pureconfig-cats-effect" % PureConfigVersion
+        "com.github.pureconfig" %% "pureconfig-cats-effect" % PureConfigVersion,
+        "io.chrisdavenport" %% "log4cats-core"    % Log4CatsVersion,
+        "io.chrisdavenport" %% "log4cats-slf4j"   % Log4CatsVersion,
+        "ch.qos.logback"  %  "logback-classic"     % LogbackVersion
       )
     )
     .dependsOn(`common-jvm`)

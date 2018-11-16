@@ -1,20 +1,5 @@
 package org.vilvaadn.pubsubexample
 
-import com.google.api.core.ApiFuture
-import com.google.api.core.ApiFutureCallback
-import com.google.api.core.ApiFutures
-import com.google.pubsub.v1.ProjectTopicName
-import com.google.cloud.pubsub.v1.Publisher
-import com.google.api.gax.rpc.ApiException
-import com.google.protobuf.ByteString
-import com.google.pubsub.v1.PubsubMessage
-
-
-import io.grpc.{ ManagedChannelBuilder, ManagedChannel }
-import com.google.api.gax.grpc.GrpcTransportChannel
-import com.google.api.gax.rpc.{ TransportChannelProvider, FixedTransportChannelProvider }
-import com.google.api.gax.core.{ CredentialsProvider, NoCredentialsProvider }
-
 import scala.concurrent.ExecutionContext
 import cats.syntax.applicative._
 import cats.syntax.traverse._
@@ -24,6 +9,8 @@ import cats.effect.{ Async, Effect, IO }
 import fs2._
 import pureconfig._
 import pureconfig.module.catseffect._
+import io.chrisdavenport.log4cats.Logger
+import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 
 import PubSubOps.{ PubSubConfig, publish }
 
@@ -39,11 +26,15 @@ object PubSubExamplePublisher {
     import ExecutionContext.Implicits.global
     val messages = generateMessages
     lazy val error = IO.raiseError[String](new Exception("Unable to read topic name from configuration"))
+
     
     val io = for {
+      logger <- Slf4jLogger.create[IO]
+      _ <- logger.info(s"Getting configuration")
       config <- loadConfigF[IO, PubSubConfig]
       topicId <- config.topicId.fold(error)(_.pure[IO])
-      published = publish[IO](config.projectId, topicId, messages)
+      _ <- logger.info(s"Publishing messages")
+      published = publish[IO](config.projectId, topicId, messages)(logger)
       _ <- published.compile.drain
     } yield ()
     io.unsafeRunSync

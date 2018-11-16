@@ -2,16 +2,8 @@ package org.vilvaadn.pubsubexample
 
 import java.io.File
 
-import com.google.cloud.pubsub.v1.AckReplyConsumer
-import com.google.cloud.pubsub.v1.MessageReceiver
-import com.google.cloud.pubsub.v1.Subscriber
-import com.google.pubsub.v1.ProjectSubscriptionName
-import com.google.pubsub.v1.PubsubMessage
-
-import io.grpc.{ ManagedChannelBuilder, ManagedChannel }
-import com.google.api.gax.grpc.GrpcTransportChannel
-import com.google.api.gax.rpc.{ TransportChannelProvider, FixedTransportChannelProvider }
-import com.google.api.gax.core.{ CredentialsProvider, NoCredentialsProvider }
+import io.chrisdavenport.log4cats.Logger
+import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -41,7 +33,7 @@ class PubSubExampleService[F[_]](implicit F: Effect[F]) extends Http4sDsl[F] {
   val supportedStaticExtensions =
     List(".html", ".js", ".map", ".css", ".png", ".ico")
 
-  def service(scheduler: Scheduler, config: PubSubConfig): HttpService[F] = {
+  def service(scheduler: Scheduler, config: PubSubConfig, logger: Logger[F]): HttpService[F] = {
     HttpService[F] {
       case request @ GET -> Root / "index.html" =>
         StaticFile.fromResource("/index.html", request.some)
@@ -58,7 +50,7 @@ class PubSubExampleService[F[_]](implicit F: Effect[F]) extends Http4sDsl[F] {
         for {
           subscriptionId <- config.subscriptionId.fold(error)(_.pure[F])
           q <- queue
-          effect = subscribe[F](q, config.projectId, subscriptionId).compile.drain
+          effect = subscribe[F](q, config.projectId, subscriptionId)(logger).compile.drain
           syncIO = F.runAsync(effect)(_ => IO.unit)
           _ = syncIO.unsafeRunSync
           response <- Ok("Done")
@@ -71,7 +63,7 @@ class PubSubExampleService[F[_]](implicit F: Effect[F]) extends Http4sDsl[F] {
           subscriptionId <- config.subscriptionId.fold(error)(_.pure[F])
           q <- queue
           fromClient = echoClient(q)
-          toClient = subscribe(q, config.projectId, subscriptionId).map(msg => Text(msg))
+          toClient = subscribe(q, config.projectId, subscriptionId)(logger).map(msg => Text(msg))
           built <- WebSocketBuilder[F].build(toClient, fromClient)
         } yield built
 
@@ -87,7 +79,7 @@ class PubSubExampleService[F[_]](implicit F: Effect[F]) extends Http4sDsl[F] {
   def echoClient(queue: Queue[F, String])(implicit F: Effect[F]): Sink[F, WebSocketFrame] = _.evalMap { (ws: WebSocketFrame) =>
     ws match {
       case Text(t, _) => 
-        val msg = s"Client have sent: $t"
+        val msg = s"Client have sent -> $t"
         F.delay(println(msg)) >> queue.enqueue1(msg)
       case other => 
         F.delay(println(s"Unknown type: $other")) >> queue.enqueue1("Client have sent something new")
