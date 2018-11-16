@@ -46,10 +46,6 @@ Names for project, topic and subscription are defined in following configuration
   - publisher: `publisher/src/main/resources/application.conf`
   - subscriber: `subscriber/subscriber-server/src/main/resources/application.conf`
 
-Publisher: `projectId` and `topicId` in `PubSubExamplePublisher.publish` method.
-
-Subscriber: `projectId` and `subscriptionId` in `PubSubExampleService.messages` method.
-
 Publisher/Subscriber were tested on GCP PubSub Emulator, which has to be set up as describerd in [Cloud PubSub Emulator Guide](https://cloud.google.com/pubsub/docs/emulator)
 
 SBT commands:
