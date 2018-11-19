@@ -10,6 +10,8 @@ import cats.syntax.all._
 import cats.instances.list._
 import cats.effect.{ IO, ExitCode, IOApp }
 
+import com.typesafe.config.ConfigFactory 
+
 import fs2._
 import com.typesafe.config.ConfigFactory
 import pureconfig._

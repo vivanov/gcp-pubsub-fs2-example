@@ -100,7 +100,6 @@ class PubSubExampleApp[F[_]](val config: PubSubConfig, val logger: Logger[F])(im
 
 
   def stream: Stream[F, ExitCode] = for {
-    config <- Stream.eval(loadConfigF[F, PubSubConfig])
     built <- BlazeServerBuilder[F]
       .bindHttp(8080)
       .withHttpApp(routes.orNotFound)
