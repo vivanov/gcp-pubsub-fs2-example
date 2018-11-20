@@ -4,6 +4,9 @@ import com.google.protobuf.ByteString
 import com.google.pubsub.v1.PubsubMessage
 import com.google.pubsub.v1.ProjectSubscriptionName
 import com.google.pubsub.v1.ProjectTopicName
+import com.google.pubsub.v1.Topic
+import com.google.pubsub.v1.Subscription
+import com.google.pubsub.v1.PushConfig
 
 import com.google.api.core.ApiFuture
 import com.google.api.core.ApiFutureCallback
@@ -13,6 +16,8 @@ import com.google.cloud.pubsub.v1.Publisher
 import com.google.cloud.pubsub.v1.AckReplyConsumer
 import com.google.cloud.pubsub.v1.MessageReceiver
 import com.google.cloud.pubsub.v1.Subscriber
+import com.google.cloud.pubsub.v1.TopicAdminClient
+import com.google.cloud.pubsub.v1.SubscriptionAdminClient
 
 import com.google.api.gax.rpc.ApiException
 import com.google.api.gax.grpc.GrpcTransportChannel
@@ -68,6 +73,64 @@ object PubSubOps {
     }
   })}
 
+
+  def withTopicAdminClient[F[_], A](use: TopicAdminClient => Stream[F, A])(implicit F: Effect[F], ec: ExecutionContext): Stream[F, A] =
+    Stream.bracket(F.delay(TopicAdminClient.create()))(use, client => F.delay(client.close()))
+
+  def createTopic[F[_]](projectId: String, topicId: String)(implicit F: Effect[F], ec: ExecutionContext): Stream[F, Topic] = 
+    withTopicAdminClient { client =>
+      Stream.eval(F.delay {
+        val topicName = ProjectTopicName.of(projectId, topicId)
+        client.createTopic(topicName)
+      })
+    }
+
+  def getTopic[F[_]](projectId: String, topicId: String)(implicit F: Effect[F], ec: ExecutionContext): Stream[F, Topic] = 
+    withTopicAdminClient { client =>
+      Stream.eval(F.delay {
+        val topicName = ProjectTopicName.of(projectId, topicId)
+        client.getTopic(topicName)
+      })
+    }
+
+  def deleteTopic[F[_]](projectId: String, topicId: String)(implicit F: Effect[F], ec: ExecutionContext): Stream[F, ProjectTopicName] = 
+    withTopicAdminClient { client =>
+      Stream.eval(F.delay {
+        val topicName = ProjectTopicName.of(projectId, topicId)
+        client.deleteTopic(topicName)
+        topicName
+      })
+    }
+
+
+  def withSubscriptionAdminClient[F[_], A](use: SubscriptionAdminClient => Stream[F, A])(implicit F: Effect[F], ec: ExecutionContext): Stream[F, A] =
+    Stream.bracket(F.delay(SubscriptionAdminClient.create()))(use, client => F.delay(client.close()))
+
+  def createSubscription[F[_]](projectId: String, topicId: String, subscriptionId: String)(implicit F: Effect[F], ec: ExecutionContext): Stream[F, Subscription] = 
+    withSubscriptionAdminClient { client =>
+      Stream.eval(F.delay {
+        val topicName = ProjectTopicName.of(projectId, topicId)
+        val subscriptionName = ProjectSubscriptionName.of(projectId, subscriptionId)
+        client.createSubscription(subscriptionName, topicName, PushConfig.getDefaultInstance(), 0)
+      })
+    }
+
+  def getSubscription[F[_]](projectId: String, subscriptionId: String)(implicit F: Effect[F], ec: ExecutionContext): Stream[F, Subscription] = 
+    withSubscriptionAdminClient { client =>
+      Stream.eval(F.delay {
+        val subscriptionName = ProjectSubscriptionName.of(projectId, subscriptionId)
+        client.getSubscription(subscriptionName)
+      })
+    }
+
+  def deleteSubscription[F[_]](projectId: String, subscriptionId: String)(implicit F: Effect[F], ec: ExecutionContext): Stream[F, ProjectSubscriptionName] = 
+    withSubscriptionAdminClient { client =>
+      Stream.eval(F.delay {
+        val subscriptionName = ProjectSubscriptionName.of(projectId, subscriptionId)
+        client.deleteSubscription(subscriptionName)
+        subscriptionName
+      })
+    }
 
   def publish[F[_]](projectId: String, topicId: String, messages: List[String])(logger: Logger[F])(implicit F: Effect[F], ec: ExecutionContext): Stream[F, List[String]] = {
     val topicName = ProjectTopicName.of(projectId, topicId)
