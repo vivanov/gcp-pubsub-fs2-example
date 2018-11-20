@@ -6,9 +6,22 @@ val Specs2Version = "4.1.0"
 val LogbackVersion = "1.2.3"
 val GoogleCloudPubSubVersion = "1.48.0"
 val ScalaJSReactVersion = "1.3.1"
-val scalaJsDomVersion = "0.9.6"
+val ScalaJsDomVersion = "0.9.6"
 val PureConfigVersion = "0.9.2"
 val Log4CatsVersion = "0.1.0"
+
+val ReactVersion = "16.5.1"
+
+lazy val sharedSettings = Seq(
+  publishArtifact := false,
+  libraryDependencies ++= Seq(
+    "io.chrisdavenport" %% "log4cats-core"    % Log4CatsVersion,
+    "io.chrisdavenport" %% "log4cats-slf4j"   % Log4CatsVersion,
+    "ch.qos.logback"    %  "logback-classic"  % LogbackVersion,
+    "com.github.pureconfig" %% "pureconfig"    % PureConfigVersion,
+    "com.github.pureconfig" %% "pureconfig-cats-effect" % PureConfigVersion
+  )
+)
 
 lazy val root = project 
   .in(sbt file ".")
@@ -23,16 +36,14 @@ lazy val root = project
 lazy val common = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Full)
   .settings(
-    // Add common settings here
+    // Add settings common both for JVM and JS here
   ).
+  jvmSettings(sharedSettings: _*).
   jvmSettings(
     // Add JVM-specific settings here
       libraryDependencies ++= Seq(
         "co.fs2" %% "fs2-core" % FS2Version,
         "com.google.cloud" % "google-cloud-pubsub" % GoogleCloudPubSubVersion,
-        "io.chrisdavenport" %% "log4cats-core"    % Log4CatsVersion,
-        "io.chrisdavenport" %% "log4cats-slf4j"   % Log4CatsVersion,
-        "ch.qos.logback"  %  "logback-classic"     % LogbackVersion
       )
   ).
   jsSettings(
@@ -57,13 +68,13 @@ lazy val `subscriber-client` =
       // Put the jsdeps file on a place reachable for the server
       crossTarget in (Compile, packageJSDependencies) := (resourceManaged in Compile).value,
       libraryDependencies ++= Seq(
-        "org.scala-js" %%% "scalajs-dom" % scalaJsDomVersion,
+        "org.scala-js" %%% "scalajs-dom" % ScalaJsDomVersion,
         "com.github.japgolly.scalajs-react" %%% "core" % ScalaJSReactVersion,
         "com.github.japgolly.scalajs-react" %%% "extra" % ScalaJSReactVersion
       ),
       npmDependencies in Compile ++= Seq(
-        "react" -> "16.5.1",
-        "react-dom" -> "16.5.1")
+        "react" -> ReactVersion,
+        "react-dom" -> ReactVersion)
       )
     .enablePlugins(ScalaJSPlugin)
     .enablePlugins(ScalaJSBundlerPlugin)
@@ -72,18 +83,14 @@ lazy val `subscriber-client` =
 lazy val `subscriber-server` =
   project
     .in(sbt file s"subscriber/subscriber-server")
+    .settings(sharedSettings: _*)
     .settings(
       libraryDependencies ++= Seq(
         "org.http4s"      %% "http4s-blaze-server" % Http4sVersion,
         "org.http4s"      %% "http4s-circe"        % Http4sVersion,
         "org.http4s"      %% "http4s-dsl"          % Http4sVersion,
         "org.http4s"      %% "http4s-twirl"        % Http4sVersion,
-        "org.specs2"      %% "specs2-core"         % Specs2Version % "test",
-        "io.chrisdavenport" %% "log4cats-core"    % Log4CatsVersion,
-        "io.chrisdavenport" %% "log4cats-slf4j"   % Log4CatsVersion,
-        "ch.qos.logback"  %  "logback-classic"     % LogbackVersion,
-        "com.github.pureconfig" %% "pureconfig"    % PureConfigVersion,
-        "com.github.pureconfig" %% "pureconfig-cats-effect" % PureConfigVersion
+        "org.specs2"      %% "specs2-core"         % Specs2Version % "test"
       ),
       // Allows to read the generated JS on client (-bundle.js and -bundle.js.map files)
       resources in Compile ++= (webpack in (`subscriber-client`, Compile, fastOptJS)).value
@@ -104,14 +111,10 @@ lazy val `subscriber-server` =
 
 lazy val publisher =
   project
+    .settings(sharedSettings: _*)
     .settings(
       libraryDependencies ++= Seq(
-        "co.fs2" %% "fs2-core" % FS2Version,
-        "com.github.pureconfig" %% "pureconfig"    % PureConfigVersion,
-        "com.github.pureconfig" %% "pureconfig-cats-effect" % PureConfigVersion,
-        "io.chrisdavenport" %% "log4cats-core"    % Log4CatsVersion,
-        "io.chrisdavenport" %% "log4cats-slf4j"   % Log4CatsVersion,
-        "ch.qos.logback"  %  "logback-classic"     % LogbackVersion
+        "co.fs2" %% "fs2-core" % FS2Version
       )
     )
     .dependsOn(`common-jvm`)
