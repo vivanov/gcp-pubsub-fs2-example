@@ -1,5 +1,7 @@
 package org.vilvaadn.pubsubexample
 
+import java.util.concurrent.Executors
+
 import com.google.protobuf.ByteString
 import com.google.pubsub.v1.PubsubMessage
 import com.google.pubsub.v1.ProjectSubscriptionName
@@ -71,7 +73,7 @@ object PubSubOps {
       F.runAsync(logged)(_ => IO.unit).unsafeRunSync // No asyncF available till cats-effect 1.0.0 (crying)
       cb(messageId.asRight[Throwable])
     }
-  })}
+  }, Executors.newSingleThreadExecutor())}
 
 
   def withTopicAdminClient[F[_], A](use: TopicAdminClient => Stream[F, A])(implicit F: Effect[F], ec: ExecutionContext): Stream[F, A] =
