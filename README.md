@@ -50,7 +50,7 @@ Publisher/Subscriber were tested on GCP PubSub Emulator, which has to be set up 
 
 SBT commands:
 
-`publisher/run` - runs Publisher which sends 10 test messages to the Topic
+`publisher/run` - runs Publisher which repeatedly sends 10 test messages in intervals of 10 seconds to the Topic
 
 `subscriber-server/run` - starts Http4s service, test route for subscription to retrieve test messages from Topic is available under `/pubsub` path. Server also serves websocket route to get messages both from PubSub Topic and from client (see below).
 
