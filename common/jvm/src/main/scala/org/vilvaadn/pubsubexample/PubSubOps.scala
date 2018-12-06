@@ -75,10 +75,13 @@ object PubSubOps {
   }, Executors.newSingleThreadExecutor())}
 
 
-  def withTopicAdminClient[F[_], A](use: TopicAdminClient => Stream[F, A])(implicit F: Effect[F], ec: ExecutionContext): Stream[F, A] =
-    Stream.bracket(F.delay(TopicAdminClient.create()))(use, client => F.delay(client.close()))
+  def withTopicAdminClient[F[_], A](use: TopicAdminClient => Stream[F, A])(implicit F: ConcurrentEffect[F], cs: ContextShift[F]): Stream[F, A] =
+    for {
+      client <- Stream.bracket(F.delay(TopicAdminClient.create()))(client => F.delay(client.close()))
+      result <- use(client)
+    } yield result
 
-  def createTopic[F[_]](projectId: String, topicId: String)(implicit F: Effect[F], ec: ExecutionContext): Stream[F, Topic] = 
+  def createTopic[F[_]](projectId: String, topicId: String)(implicit F: ConcurrentEffect[F], cs: ContextShift[F]): Stream[F, Topic] = 
     withTopicAdminClient { client =>
       Stream.eval(F.delay {
         val topicName = ProjectTopicName.of(projectId, topicId)
@@ -86,7 +89,7 @@ object PubSubOps {
       })
     }
 
-  def getTopic[F[_]](projectId: String, topicId: String)(implicit F: Effect[F], ec: ExecutionContext): Stream[F, Topic] = 
+  def getTopic[F[_]](projectId: String, topicId: String)(implicit F: ConcurrentEffect[F], cs: ContextShift[F]): Stream[F, Topic] = 
     withTopicAdminClient { client =>
       Stream.eval(F.delay {
         val topicName = ProjectTopicName.of(projectId, topicId)
@@ -94,7 +97,7 @@ object PubSubOps {
       })
     }
 
-  def deleteTopic[F[_]](projectId: String, topicId: String)(implicit F: Effect[F], ec: ExecutionContext): Stream[F, ProjectTopicName] = 
+  def deleteTopic[F[_]](projectId: String, topicId: String)(implicit F: ConcurrentEffect[F], cs: ContextShift[F]): Stream[F, ProjectTopicName] = 
     withTopicAdminClient { client =>
       Stream.eval(F.delay {
         val topicName = ProjectTopicName.of(projectId, topicId)
@@ -104,10 +107,12 @@ object PubSubOps {
     }
 
 
-  def withSubscriptionAdminClient[F[_], A](use: SubscriptionAdminClient => Stream[F, A])(implicit F: Effect[F], ec: ExecutionContext): Stream[F, A] =
-    Stream.bracket(F.delay(SubscriptionAdminClient.create()))(use, client => F.delay(client.close()))
+  def withSubscriptionAdminClient[F[_], A](use: SubscriptionAdminClient => Stream[F, A])(implicit F: ConcurrentEffect[F], cs: ContextShift[F]): Stream[F, A] = for {
+    client <- Stream.bracket(F.delay(SubscriptionAdminClient.create()))(client => F.delay(client.close()))
+    result <- use(client)
+  } yield result
 
-  def createSubscription[F[_]](projectId: String, topicId: String, subscriptionId: String)(implicit F: Effect[F], ec: ExecutionContext): Stream[F, Subscription] = 
+  def createSubscription[F[_]](projectId: String, topicId: String, subscriptionId: String)(implicit F: ConcurrentEffect[F], cs: ContextShift[F]): Stream[F, Subscription] = 
     withSubscriptionAdminClient { client =>
       Stream.eval(F.delay {
         val topicName = ProjectTopicName.of(projectId, topicId)
@@ -116,7 +121,7 @@ object PubSubOps {
       })
     }
 
-  def getSubscription[F[_]](projectId: String, subscriptionId: String)(implicit F: Effect[F], ec: ExecutionContext): Stream[F, Subscription] = 
+  def getSubscription[F[_]](projectId: String, subscriptionId: String)(implicit F: ConcurrentEffect[F], cs: ContextShift[F]): Stream[F, Subscription] = 
     withSubscriptionAdminClient { client =>
       Stream.eval(F.delay {
         val subscriptionName = ProjectSubscriptionName.of(projectId, subscriptionId)
@@ -124,7 +129,7 @@ object PubSubOps {
       })
     }
 
-  def deleteSubscription[F[_]](projectId: String, subscriptionId: String)(implicit F: Effect[F], ec: ExecutionContext): Stream[F, ProjectSubscriptionName] = 
+  def deleteSubscription[F[_]](projectId: String, subscriptionId: String)(implicit F: ConcurrentEffect[F], cs: ContextShift[F]): Stream[F, ProjectSubscriptionName] = 
     withSubscriptionAdminClient { client =>
       Stream.eval(F.delay {
         val subscriptionName = ProjectSubscriptionName.of(projectId, subscriptionId)

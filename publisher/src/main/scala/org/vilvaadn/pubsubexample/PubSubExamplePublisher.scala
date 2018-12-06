@@ -2,10 +2,6 @@ package org.vilvaadn.pubsubexample
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import cats.syntax.applicative._
-import cats.syntax.traverse._
-import cats.syntax.either._
-import cats.syntax.monad._
 import cats.syntax.all._
 import cats.instances.list._
 import cats.effect.{ IO, ExitCode, IOApp }
